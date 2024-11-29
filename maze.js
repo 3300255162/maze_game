@@ -34,6 +34,34 @@ class MazeGame {
         
         // 使用 requestAnimationFrame
         this.boundDraw = this.draw.bind(this);
+        
+        // 添加金币相关
+        this.coins = [];  // 存储金币位置
+        this.coinCount = parseInt(localStorage.getItem('totalCoins')) || 0;  // 从本地存储读取总金币数
+        
+        // 添加皮肤相关
+        this.skins = [
+            { id: 'black', name: '经典黑', color: '#000000', price: 0, owned: true },
+            { id: 'blue', name: '天空蓝', color: '#1E90FF', price: 10 },
+            { id: 'purple', name: '梦幻紫', color: '#9370DB', price: 20 },
+            { id: 'gold', name: '尊贵金', color: '#FFD700', price: 50 },
+            { id: 'rainbow', name: '彩虹', color: 'rainbow', price: 100 },
+            { id: 'neon', name: '霓虹', color: '#FF1493', price: 200 },
+            { id: 'galaxy', name: '星空', color: 'galaxy', price: 500 }
+        ];
+        
+        // 从本地存储加载已拥有的皮肤
+        this.loadOwnedSkins();
+        
+        // 设置当前使用的皮肤
+        this.currentSkin = localStorage.getItem('currentSkin') || 'black';
+        
+        // 设置商城
+        this.setupShop();
+        
+        // 添加玩家名字相关
+        this.playerName = '';
+        this.setupStartScreen();
     }
 
     initLevel() {
@@ -42,12 +70,12 @@ class MazeGame {
             // 移动端难度调整
             this.rows = 9 + Math.min(6, Math.floor(this.level)); // 最大到15行
             this.cols = 9 + Math.min(6, Math.floor(this.level)); // 最大到15列
-            this.viewRadius = Math.max(2, 3 - Math.floor(this.level / 5)); // 视野范围更缓慢减少
+            this.viewRadius = Math.max(1, 2 - Math.floor(this.level / 4)); // 从2格开始，每4关减少1格，最小1格
         } else {
             // PC端难度调整
             this.rows = 11 + (this.level * 2);
             this.cols = 11 + (this.level * 2);
-            this.viewRadius = Math.max(2, 4 - Math.floor(this.level / 3));
+            this.viewRadius = Math.max(1, 3 - Math.floor(this.level / 3)); // 从3格开始，每3关减少1格，最小1格
         }
 
         // 确保单元格大小不小于最小值
@@ -78,6 +106,9 @@ class MazeGame {
         // 从第3关开始添加陷阱
         this.hasTrap = this.level >= 3;
         this.rotationDegree = 0;
+
+        // 生成迷宫后添加金币
+        this.generateCoins();
     }
 
     updateLevelDisplay() {
@@ -175,7 +206,7 @@ class MazeGame {
         this.ctx.rotate(this.rotationDegree * Math.PI / 180);
         this.ctx.translate(-this.canvas.width/2, -this.canvas.height/2);
 
-        // 检查终点是否在可见范围内
+        // 检点是否在可见范围内
         const endX = this.cols - 2;
         const endY = this.rows - 2;
         const isEndVisible = visibleCells.some(cell => cell.x === endX && cell.y === endY);
@@ -191,8 +222,59 @@ class MazeGame {
             );
         }
 
+        // 绘制金币
+        this.coins.forEach(coin => {
+            const isCoinVisible = visibleCells.some(cell => cell.x === coin.x && cell.y === coin.y);
+            if (isCoinVisible) {
+                this.ctx.fillStyle = '#FFD700';  // 金色
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    coin.x * this.cellSize + this.cellSize/2,
+                    coin.y * this.cellSize + this.cellSize/2,
+                    this.cellSize/4,
+                    0,
+                    Math.PI * 2
+                );
+                this.ctx.fill();
+            }
+        });
+
         // 绘制玩家
-        this.ctx.fillStyle = '#000';
+        const skin = this.skins.find(s => s.id === this.currentSkin);
+        if (skin) {
+            if (skin.id === 'rainbow') {
+                const gradient = this.ctx.createLinearGradient(
+                    this.playerX * this.cellSize, 
+                    this.playerY * this.cellSize,
+                    (this.playerX + 1) * this.cellSize,
+                    (this.playerY + 1) * this.cellSize
+                );
+                gradient.addColorStop(0, 'red');
+                gradient.addColorStop(0.17, 'orange');
+                gradient.addColorStop(0.33, 'yellow');
+                gradient.addColorStop(0.5, 'green');
+                gradient.addColorStop(0.67, 'blue');
+                gradient.addColorStop(0.83, 'indigo');
+                gradient.addColorStop(1, 'violet');
+                this.ctx.fillStyle = gradient;
+            } else if (skin.id === 'galaxy') {
+                const gradient = this.ctx.createLinearGradient(
+                    this.playerX * this.cellSize, 
+                    this.playerY * this.cellSize,
+                    (this.playerX + 1) * this.cellSize,
+                    (this.playerY + 1) * this.cellSize
+                );
+                gradient.addColorStop(0, '#663399');
+                gradient.addColorStop(0.5, '#4B0082');
+                gradient.addColorStop(1, '#000066');
+                this.ctx.fillStyle = gradient;
+            } else {
+                this.ctx.fillStyle = skin.color;
+            }
+        } else {
+            this.ctx.fillStyle = '#000';
+        }
+
         this.ctx.beginPath();
         this.ctx.arc(
             this.playerX * this.cellSize + this.cellSize/2, 
@@ -336,6 +418,20 @@ class MazeGame {
         // 检查新位置是否有效
         if (newY >= 0 && newY < this.rows && newX >= 0 && newX < this.cols && 
             (this.maze[newY][newX] === 0 || this.maze[newY][newX] === 2)) {
+            
+            // 检查是否收集到金币
+            const coinIndex = this.coins.findIndex(coin => 
+                coin.x === newX && coin.y === newY
+            );
+            
+            if (coinIndex !== -1) {
+                this.coins.splice(coinIndex, 1);
+                this.coinCount++;
+                // 保存总金币数到本地存储
+                localStorage.setItem('totalCoins', this.coinCount);
+                // 更新显示
+                this.updateCoinDisplay();
+            }
             
             // 检查陷阱
             if (this.maze[newY][newX] === 2) {
@@ -631,6 +727,188 @@ class MazeGame {
                 }
             }
         }
+    }
+
+    // 添加金币生成方法
+    generateCoins() {
+        this.coins = [];
+        // 根据关卡增加金币数量
+        const coinNumber = Math.min(5, 2 + Math.floor(this.level / 2));
+        
+        for (let i = 0; i < coinNumber; i++) {
+            let coinPlaced = false;
+            while (!coinPlaced) {
+                const x = Math.floor(Math.random() * (this.cols - 4)) + 2;
+                const y = Math.floor(Math.random() * (this.rows - 4)) + 2;
+                
+                // 确保金币不会出现在墙上、起点、终点或陷阱上
+                if (this.maze[y][x] === 0 && 
+                    !(x === 1 && y === 1) && 
+                    !(x === this.cols-2 && y === this.rows-2) &&
+                    !this.coins.some(coin => coin.x === x && coin.y === y)) {
+                    this.coins.push({x, y});
+                    coinPlaced = true;
+                }
+            }
+        }
+    }
+
+    // 添加金币显示更新方法
+    updateCoinDisplay() {
+        const coinInfo = document.getElementById('coinInfo');
+        if (coinInfo) {
+            coinInfo.textContent = `总金币: ${this.coinCount}`;
+        }
+    }
+
+    // 修改 addPlayerInfo 方法，添加金币显示
+    addPlayerInfo() {
+        const gameContainer = document.getElementById('gameContainer');
+        const playerInfo = document.createElement('div');
+        playerInfo.className = 'player-info';
+        playerInfo.innerHTML = `
+            <div>玩家：${this.playerName}</div>
+            <div id="coinInfo">总金币: ${this.coinCount}</div>
+        `;
+        gameContainer.appendChild(playerInfo);
+    }
+
+    setupStartScreen() {
+        const startButton = document.getElementById('startButton');
+        const playerNameInput = document.getElementById('playerName');
+        const startScreen = document.getElementById('startScreen');
+        const gameContainer = document.getElementById('gameContainer');
+
+        startButton.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name) {
+                this.playerName = name;
+                // 保存玩家名字
+                localStorage.setItem('playerName', name);
+                
+                // 隐藏开始页面，显示游戏
+                startScreen.style.display = 'none';
+                gameContainer.style.display = 'block';
+                
+                // 添加玩家信息显示
+                this.addPlayerInfo();
+                
+                // 开始游戏
+                this.initLevel();
+                this.draw();
+            } else {
+                alert('请输入你的名字');
+            }
+        });
+
+        // 如果之前保存过名字，自动填充
+        const savedName = localStorage.getItem('playerName');
+        if (savedName) {
+            playerNameInput.value = savedName;
+        }
+
+        // 回车键也能开始游戏
+        playerNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                startButton.click();
+            }
+        });
+    }
+
+    // 添加加载已拥有皮肤的方法
+    loadOwnedSkins() {
+        const ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['black'];
+        this.skins.forEach(skin => {
+            skin.owned = ownedSkins.includes(skin.id);
+        });
+    }
+
+    // 添加商城设置方法
+    setupShop() {
+        const shopBtn = document.getElementById('shopBtn');
+        const shopMenu = document.getElementById('shopMenu');
+        const closeShopBtn = document.getElementById('closeShopBtn');
+        const shopGrid = document.getElementById('shopGrid');
+
+        if (shopBtn) {
+            shopBtn.addEventListener('click', () => {
+                this.updateShopDisplay();
+                shopMenu.style.display = 'flex';
+            });
+        }
+
+        if (closeShopBtn) {
+            closeShopBtn.addEventListener('click', () => {
+                shopMenu.style.display = 'none';
+            });
+        }
+
+        if (shopMenu) {
+            shopMenu.addEventListener('click', (e) => {
+                if (e.target === shopMenu) {
+                    shopMenu.style.display = 'none';
+                }
+            });
+        }
+    }
+
+    // 添加商城显示更新方法
+    updateShopDisplay() {
+        const shopGrid = document.getElementById('shopGrid');
+        if (!shopGrid) return;
+
+        shopGrid.innerHTML = '';
+        this.skins.forEach(skin => {
+            const item = document.createElement('div');
+            item.className = `skin-item ${skin.owned ? 'owned' : ''} ${skin.id === this.currentSkin ? 'selected' : ''}`;
+            
+            // 根据皮肤类型设置不同的预览样式
+            let previewStyle = '';
+            if (skin.id === 'rainbow') {
+                previewStyle = 'background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)';
+            } else if (skin.id === 'galaxy') {
+                previewStyle = 'background: linear-gradient(45deg, #663399, #4B0082, #000066)';
+            } else {
+                previewStyle = `background-color: ${skin.color}`;
+            }
+            
+            item.innerHTML = `
+                <div class="skin-name">${skin.name}</div>
+                <div class="skin-preview" style="${previewStyle}"></div>
+                ${skin.owned ? 
+                    (skin.id === this.currentSkin ? '<div>使用中</div>' : '<div>点击使用</div>') : 
+                    `<div class="skin-price">${skin.price} 金币</div>`}
+            `;
+
+            item.addEventListener('click', () => {
+                if (skin.owned) {
+                    this.currentSkin = skin.id;
+                    localStorage.setItem('currentSkin', skin.id);
+                    this.updateShopDisplay();
+                    this.draw();
+                } else if (this.coinCount >= skin.price) {
+                    if (confirm(`确定要购买 ${skin.name} 吗？需要 ${skin.price} 金币`)) {
+                        this.coinCount -= skin.price;
+                        skin.owned = true;
+                        this.currentSkin = skin.id;
+                        
+                        localStorage.setItem('totalCoins', this.coinCount);
+                        localStorage.setItem('currentSkin', skin.id);
+                        localStorage.setItem('ownedSkins', 
+                            JSON.stringify(this.skins.filter(s => s.owned).map(s => s.id))
+                        );
+                        
+                        this.updateCoinDisplay();
+                        this.updateShopDisplay();
+                        this.draw();
+                    }
+                } else {
+                    alert('金币不足！');
+                }
+            });
+
+            shopGrid.appendChild(item);
+        });
     }
 }
 
