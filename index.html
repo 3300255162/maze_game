@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>迷宫游戏</title>
+    <style>
+        :root {
+            --primary-color: #000;
+            --background-color: #fff;
+            --text-color: #000;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            text-align: center;
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: var(--text-color);
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: normal;
+            letter-spacing: 4px;
+        }
+
+        canvas {
+            border: 2px solid var(--primary-color);
+            background: white;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .info-text {
+            background: white;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #000;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            display: none;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            max-width: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border: 2px solid var(--primary-color);
+            background: white;
+            color: var(--text-color);
+            font-size: 28px;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: all 0.2s;
+        }
+
+        .control-btn:active {
+            background: #000;
+            color: #fff;
+        }
+
+        .mobile-hint {
+            display: none;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            #upBtn { grid-column: 2; grid-row: 1; }
+            #leftBtn { grid-column: 1; grid-row: 2; }
+            #downBtn { grid-column: 2; grid-row: 2; }
+            #rightBtn { grid-column: 3; grid-row: 2; }
+
+            canvas {
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .mobile-hint {
+                display: block;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #000;
+                --text-color: #fff;
+            }
+
+            .info-text {
+                background: #000;
+                color: #fff;
+                border-color: #fff;
+            }
+
+            canvas {
+                background: #000;
+                border-color: #fff;
+            }
+
+            .control-btn {
+                background: #000;
+                color: #fff;
+                border-color: #fff;
+            }
+
+            .control-btn:active {
+                background: #fff;
+                color: #000;
+            }
+        }
+
+        .level-display {
+            font-size: 1.5em;
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px solid var(--primary-color);
+            display: inline-block;
+            min-width: 100px;
+            letter-spacing: 2px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .level-display {
+                border-color: #fff;
+            }
+        }
+
+        .level-header {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .level-display, .menu-btn {
+            min-width: 120px;
+            width: 120px;
+            height: 45px;
+            font-size: 1.5em;
+            padding: 0;
+            border: 2px solid var(--primary-color);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        .menu-btn {
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-btn:hover {
+            background: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .level-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .level-menu-content {
+            background: var(--background-color);
+            padding: 30px;
+            border: 2px solid var(--primary-color);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            padding: 10px;
+        }
+
+        .level-btn {
+            padding: 15px 0;
+            width: 100%;
+            min-height: 50px;
+            border: 2px solid var(--primary-color);
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .level-btn.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .level-btn.current {
+            background: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; display: flex; justify-content: center; align-items: center; z-index: 9999;">
+        加载中...
+    </div>
+    <div class="game-container">
+        <h1>迷宫挑战</h1>
+        <div class="level-header">
+            <div class="level-display" id="levelDisplay">关卡 1</div>
+            <button class="menu-btn" id="levelMenuBtn">关卡目录</button>
+        </div>
+        
+        <canvas id="mazeCanvas" width="600" height="600"></canvas>
+        
+        <div class="info-text">
+            <p>🎮 电脑使用方向键或 WASD 移动角色</p>
+            <p class="mobile-hint">📱 手机可以使用下方按钮或滑动屏幕控制</p>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="upBtn">↑</button>
+            <button class="control-btn" id="leftBtn">←</button>
+            <button class="control-btn" id="downBtn">↓</button>
+            <button class="control-btn" id="rightBtn">→</button>
+        </div>
+    </div>
+    <div class="level-menu" id="levelMenu">
+        <div class="level-menu-content">
+            <h2>关卡目录</h2>
+            <div class="level-grid" id="levelGrid"></div>
+            <button class="close-btn" id="closeMenuBtn">关闭</button>
+        </div>
+    </div>
+    <script src="maze.js" defer></script>
+    <script>
+        window.addEventListener('load', function() {
+            document.getElementById('loading').style.display = 'none';
+        });
+    </script>
+</body>
+</html> 
