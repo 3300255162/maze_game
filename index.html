@@ -181,6 +181,8 @@
             justify-content: center;
             gap: 10px;
             margin-bottom: 20px;
+            position: relative;
+            padding-top: 50px;
         }
 
         .level-display, .menu-btn {
@@ -328,12 +330,14 @@
 
         .player-info {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 0;
+            right: 0;
             padding: 8px 15px;
             border: 2px solid var(--primary-color);
             font-size: 1em;
             letter-spacing: 1px;
+            background: var(--background-color);
+            z-index: 10;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -406,6 +410,172 @@
 
         .skin-name {
             margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .level-header {
+                padding-top: 60px;
+            }
+
+            .player-info {
+                width: auto;
+                max-width: 90%;
+                right: 5%;
+            }
+
+            .level-display, .menu-btn {
+                min-width: 90px;
+                width: 90px;
+                font-size: 1.2em;
+            }
+        }
+
+        /* 优化移动端开始页面 */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+                margin: 15px 0;
+            }
+
+            .start-form {
+                gap: 15px;
+                margin-top: 20px;
+                width: 90%;
+                max-width: 300px;
+            }
+
+            #playerName {
+                width: 100%;
+                padding: 10px 15px;
+                font-size: 1.1em;
+            }
+
+            .start-btn {
+                padding: 10px 20px;
+                font-size: 1.1em;
+            }
+
+            /* 优化商城界面 */
+            .shop-content {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .shop-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                padding: 5px;
+            }
+
+            .skin-item {
+                padding: 8px;
+            }
+
+            .skin-preview {
+                width: 40px;
+                height: 40px;
+            }
+
+            .skin-name {
+                font-size: 0.9em;
+            }
+
+            /* 优化关卡目录 */
+            .level-menu-content {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .level-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                padding: 5px;
+            }
+
+            .level-btn {
+                padding: 10px 0;
+                min-height: 40px;
+                font-size: 1em;
+            }
+
+            /* 优化游戏控制界面 */
+            .controls {
+                max-width: 250px;
+                margin: 15px auto;
+            }
+
+            .control-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 22px;
+            }
+
+            /* 优化信息显示 */
+            .info-text {
+                padding: 10px;
+                margin: 15px 0;
+                font-size: 0.85em;
+            }
+
+            .player-info {
+                font-size: 0.9em;
+                padding: 6px 12px;
+                right: 10px;
+                top: 5px;
+            }
+
+            /* 优化按钮布局 */
+            .level-header {
+                padding-top: 50px;
+                gap: 8px;
+            }
+
+            .level-display, .menu-btn {
+                min-width: 85px;
+                width: 85px;
+                height: 40px;
+                font-size: 1.1em;
+            }
+        }
+
+        /* 针对更小屏幕的优化 */
+        @media (max-width: 360px) {
+            .level-display, .menu-btn {
+                min-width: 75px;
+                width: 75px;
+                height: 35px;
+                font-size: 1em;
+            }
+
+            .shop-grid {
+                grid-template-columns: repeat(1, 1fr);
+            }
+
+            .level-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .controls {
+                max-width: 220px;
+            }
+
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        /* 优化加载提示 */
+        #loading {
+            font-size: 1.2em;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            #loading {
+                font-size: 1em;
+            }
         }
     </style>
 </head>
