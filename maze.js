@@ -3,7 +3,7 @@ class MazeGame {
         this.canvas = document.getElementById('mazeCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.level = 1;
-        this.isMobile = window.innerWidth <= 768;
+        this.isMobile = this.checkMobile();
         this.maxLevel = this.isMobile ? 10 : 30; // 移动端最多10关
         this.initLevel();
         this.bindControls();
@@ -320,12 +320,11 @@ class MazeGame {
 
     // 添加这个新方法来处理画布大小调整
     resizeCanvas() {
-        // 防抖处理
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
         this.resizeTimeout = setTimeout(() => {
-            this.isMobile = window.innerWidth <= 768;
+            this.isMobile = this.checkMobile(); // 更新移动端状态
             const maxWidth = Math.min(window.innerWidth - 40, 600);
             const scale = maxWidth / this.canvas.width;
             this.canvas.style.width = `${this.canvas.width * scale}px`;
@@ -336,8 +335,7 @@ class MazeGame {
 
     // 添加这个新方法来设置移动端控制
     setupMobileControls() {
-        // 优化触摸事件
-        let touchTimeout;
+        // 设置按钮控制
         const buttons = {
             'upBtn': { key: 'ArrowUp' },
             'downBtn': { key: 'ArrowDown' },
@@ -350,28 +348,54 @@ class MazeGame {
             if (btn) {
                 btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    if (touchTimeout) clearTimeout(touchTimeout);
                     this.handleMove(config.key);
                 }, { passive: false });
             }
         }
 
-        // 优化滑动控制
-        let lastTouchTime = 0;
-        const touchThrottle = 100; // 限制触摸事件频率
+        // 添加滑动控制
+        let startX, startY;
+        const minSwipeDistance = 30; // 最小滑动距离
 
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            lastTouchTime = Date.now();
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
         }, { passive: false });
 
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            const currentTime = Date.now();
-            if (currentTime - lastTouchTime < touchThrottle) return;
-            lastTouchTime = currentTime;
-            
-            // ... 原有的触摸处理代码 ...
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            if (!startX || !startY) return;
+
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+
+            // 确保滑动距离足够
+            if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
+                return;
+            }
+
+            // 判断滑动方向
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // 水平滑动
+                if (deltaX > 0) {
+                    this.handleMove('ArrowRight');
+                } else {
+                    this.handleMove('ArrowLeft');
+                }
+            } else {
+                // 垂直滑动
+                if (deltaY > 0) {
+                    this.handleMove('ArrowDown');
+                } else {
+                    this.handleMove('ArrowUp');
+                }
+            }
         }, { passive: false });
     }
 
@@ -909,6 +933,13 @@ class MazeGame {
 
             shopGrid.appendChild(item);
         });
+    }
+
+    // 添加更准确的移动端检测方法
+    checkMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+            || window.innerWidth <= 1024  // 增加平板检测
+            || ('ontouchstart' in window); // 检测触摸支持
     }
 }
 
